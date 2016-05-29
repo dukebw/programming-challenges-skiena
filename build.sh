@@ -1,0 +1,2 @@
+cscope -R -b
+make
