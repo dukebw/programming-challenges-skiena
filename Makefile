@@ -1,9 +1,9 @@
 # NOTE(brendan): set P using "export P=program_name" from shell
-P=three_n_plus_one
+P=minesweeper
 
 OBJECTS=
 # STD_FLAGS=gnu11
-STD_FLAGS=c90
+STD_FLAGS=c11
 MORE_FLAGS=#-DSHA1TEST
 CRYPTO_IMPL=crypto-grabbag/Implementations
 SLRE=slre
