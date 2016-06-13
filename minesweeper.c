@@ -34,7 +34,7 @@ int main(void)
     uint32_t Status = 0;
     uint32_t NumRows;
     uint32_t NumColumns;
-    char MinesweeperBoard[MAX_COL_OR_ROW_ELEMENTS][MAX_COL_OR_ROW_ELEMENTS];
+    char MinesweeperBoard[MAX_COL_OR_ROW_ELEMENTS + 1][MAX_COL_OR_ROW_ELEMENTS + 1];
 
     while ((EOF != scanf("%d %d\n", &NumRows, &NumColumns)) &&
            ((0 != NumRows) || (0 != NumColumns)))
@@ -64,7 +64,7 @@ int main(void)
                  ColumnIndex < NumColumns;
                  ++ColumnIndex)
             {
-                if ('*' != MinesweeperBoard[ColumnIndex][RowIndex])
+                if ('*' != MinesweeperBoard[RowIndex][ColumnIndex])
                 {
                     uint32_t MinAdjacentColumn;
                     uint32_t MaxAdjacentColumn;
@@ -76,21 +76,21 @@ int main(void)
 
                     uint32_t AdjacentMinesForTile = 0;
                     for (uint32_t AdjacentRowIndex = MinAdjacentRow;
-                         AdjacentRowIndex < MaxAdjacentRow;
+                         AdjacentRowIndex <= MaxAdjacentRow;
                          ++AdjacentRowIndex)
                     {
                         for (uint32_t AdjacentColumnIndex = MinAdjacentColumn;
-                             AdjacentColumnIndex < MaxAdjacentColumn;
+                             AdjacentColumnIndex <= MaxAdjacentColumn;
                              ++AdjacentColumnIndex)
                         {
-                            if ('*' == MinesweeperBoard[AdjacentColumnIndex][AdjacentRowIndex])
+                            if ('*' == MinesweeperBoard[AdjacentRowIndex][AdjacentColumnIndex])
                             {
                                 ++AdjacentMinesForTile;
                             }
                         }
                     }
 
-                    MinesweeperBoard[ColumnIndex][RowIndex] = '0' + AdjacentMinesForTile;
+                    MinesweeperBoard[RowIndex][ColumnIndex] = '0' + AdjacentMinesForTile;
                 }
             }
         }
@@ -99,8 +99,11 @@ int main(void)
              RowIndex < NumRows;
              ++RowIndex)
         {
+            MinesweeperBoard[RowIndex][NumColumns] = 0;
             printf("%s\n", MinesweeperBoard[RowIndex]);
         }
+
+        printf("\n");
     }
 
 Error:
