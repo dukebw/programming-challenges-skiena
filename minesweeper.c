@@ -36,8 +36,10 @@ int main(void)
     uint32_t NumColumns;
     char MinesweeperBoard[MAX_COL_OR_ROW_ELEMENTS + 1][MAX_COL_OR_ROW_ELEMENTS + 1];
 
-    while ((EOF != scanf("%d %d\n", &NumRows, &NumColumns)) &&
-           ((0 != NumRows) || (0 != NumColumns)))
+    for (uint32_t FieldNumber = 1;
+         (EOF != scanf("%d %d\n", &NumRows, &NumColumns)) &&
+         ((0 != NumRows) || (0 != NumColumns));
+         ++FieldNumber)
     {
         if ((MAX_COL_OR_ROW_ELEMENTS < NumRows) || (MAX_COL_OR_ROW_ELEMENTS < NumColumns))
         {
@@ -49,7 +51,7 @@ int main(void)
              RowIndex < NumRows;
              ++RowIndex)
         {
-            if (EOF == scanf("%s\n", &MinesweeperBoard[0][RowIndex]))
+            if (EOF == scanf("%s\n", &MinesweeperBoard[RowIndex][0]))
             {
                 Status = 1;
                 goto Error;
@@ -95,6 +97,13 @@ int main(void)
             }
         }
 
+        if (1 < FieldNumber)
+        {
+            printf("\n");
+        }
+
+        printf("Field #%u:\n", FieldNumber);
+
         for (uint32_t RowIndex = 0;
              RowIndex < NumRows;
              ++RowIndex)
@@ -102,8 +111,6 @@ int main(void)
             MinesweeperBoard[RowIndex][NumColumns] = 0;
             printf("%s\n", MinesweeperBoard[RowIndex]);
         }
-
-        printf("\n");
     }
 
 Error:
