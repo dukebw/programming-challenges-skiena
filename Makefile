@@ -1,5 +1,5 @@
 # NOTE(brendan): set P using "export P=program_name" from shell
-P=minesweeper
+P=the_trip
 
 OBJECTS=
 # STD_FLAGS=gnu11
