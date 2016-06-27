@@ -10,15 +10,13 @@ int main(void)
 {
     int32_t Status = 0;
 
-    // TODO(bwd): logic issue with steps 5-8
     // 1 While number of students != 0 do
     // 2     read in all pairs of floats for number of students
-    // 3     calculate average
-    // 4     compensation := (sum (abs(spent_for_student - avg))/2)
-    // 5     if number of students even
-    // 6         result := compensation - 0.01
-    // 7     else
-    // 8         result := compensation
+    // 3     truncated_average := floor((sum (amounts))/students)
+    // 4     distance_from_avg := sum (abs(spent_for_student - truncated_average))
+    // 5     compensation := distance_from_avg/2 +/- ???
+    //
+    // 2.99 3.00 15.00 14.99
     uint32_t NumberOfStudents;
     while ((EOF != scanf("%d\n", &NumberOfStudents)) &&
            (0 != NumberOfStudents))
@@ -29,33 +27,37 @@ int main(void)
             goto Error;
         }
 
-        float AmtsSpentByStudents[MAX_NUMBER_OF_STUDENTS];
-        float TotalAmountSpent = 0.0f;
+        int32_t PenniesSpentByStudents[MAX_NUMBER_OF_STUDENTS];
+        uint32_t TotalSpentPennies = 0.0f;
         for (uint32_t StudentIndex = 0;
              StudentIndex < NumberOfStudents;
              ++StudentIndex)
         {
-            if ((EOF == scanf("%f\n", AmtsSpentByStudents + StudentIndex)) ||
-                (MAX_AMOUNT_PER_STUDENT < AmtsSpentByStudents[StudentIndex]))
+            float NextAmountSpentDollars;
+            if ((EOF == scanf("%f\n", &NextAmountSpentDollars)) ||
+                (MAX_AMOUNT_PER_STUDENT < NextAmountSpentDollars))
             {
                 Status = 1;
                 goto Error;
             }
 
-            TotalAmountSpent += AmtsSpentByStudents[StudentIndex];
+            PenniesSpentByStudents[StudentIndex] = (uint32_t)floorf(100.0f*NextAmountSpentDollars);
+
+            TotalSpentPennies += PenniesSpentByStudents[StudentIndex];
         }
 
-        float AverageAmountSpent = TotalAmountSpent/(float)NumberOfStudents;
-        float MinAmountExchanged = 0.0f;
+        int32_t TruncatedAveragePennies = TotalSpentPennies/NumberOfStudents;
+        uint32_t MinPenniesExchanged = 0.0f;
         for (uint32_t StudentIndex = 0;
              StudentIndex < NumberOfStudents;
              ++StudentIndex)
         {
-            MinAmountExchanged += fabs(AmtsSpentByStudents[StudentIndex] - AverageAmountSpent);
+            MinPenniesExchanged += abs(PenniesSpentByStudents[StudentIndex] - TruncatedAveragePennies);
         }
 
-        MinAmountExchanged = (MinAmountExchanged/2.0f) - 0.01f;
+        MinPenniesExchanged = (MinPenniesExchanged/2);
 
+        float MinAmountExchanged = ((float)MinPenniesExchanged)/100.0f;
         printf("$%.2f\n", MinAmountExchanged);
     }
 
