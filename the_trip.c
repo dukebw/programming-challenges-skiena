@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <math.h>
 
-#define MAX_NUMBER_OF_STUDENTS  1000
-#define MAX_AMOUNT_PER_STUDENT  10000.00f
+#define MAX_NUMBER_OF_STUDENTS 1000
+#define MAX_AMOUNT_PER_STUDENT 10000.00f
 
 int main(void)
 {
