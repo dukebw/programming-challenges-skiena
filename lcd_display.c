@@ -8,20 +8,61 @@
 
 typedef struct lcd_digit
 {
-    char Layout[ROWS][COLUMNS];
+    char Row0;
+    char Row1[2];
+    char Row2;
+    char Row3[2];
+    char Row4;
 } lcd_digit;
 
-static lcd_digit GlobalOne =
+static lcd_digit GlobalDigits[] =
 {
-    .Layout =
     {
-        {' ', ' ', ' '},
-        {' ', ' ', '|'},
-        {' ', ' ', ' '},
-        {' ', ' ', '|'},
-        {' ', ' ', ' '},
+        .Row0 = ' ',
+        .Row1 =
+        {
+            ' ', '|',
+        },
+        .Row2 = ' ',
+        .Row3 =
+        {
+            ' ', '|',
+        },
+        .Row4 = ' ',
     },
 };
+
+static void
+PrintMiddleOfRow(char MiddleOfRowChar, uint32_t Dashes)
+{
+    for (uint32_t DashesIndex = 0;
+         DashesIndex < Dashes;
+         ++DashesIndex)
+    {
+        printf("%c", MiddleOfRowChar);
+    }
+}
+
+static void
+PrintEvenRow(char MiddleOfRowChar, uint32_t Dashes)
+{
+    printf(" ");
+    PrintMiddleOfRow(MiddleOfRowChar, Dashes);
+    printf(" \n");
+}
+
+static void
+PrintOddRow(char LeftSideChar, char RightSideChar, uint32_t Dashes)
+{
+    for (uint32_t DashesIndex = 0;
+         DashesIndex < Dashes;
+         ++DashesIndex)
+    {
+        printf("%c", LeftSideChar);
+        PrintMiddleOfRow(' ', Dashes);
+        printf("%c\n", RightSideChar);
+    }
+}
 
 int main(void)
 {
@@ -32,17 +73,10 @@ int main(void)
            (Dashes <= 10) &&
            (NumberToDisplay <= 99999999))
     {
-        for (uint32_t RowIndex = 0;
-             RowIndex < ROWS;
-             ++RowIndex)
-        {
-            for (uint32_t ColumnIndex = 0;
-                 ColumnIndex < COLUMNS;
-                 ++ColumnIndex)
-            {
-                printf("%c", GlobalOne.Layout[RowIndex][ColumnIndex]);
-            }
-            printf("\n");
-        }
+        PrintEvenRow(GlobalDigits[0].Row0, Dashes);
+        PrintOddRow(GlobalDigits[0].Row1[0], GlobalDigits[0].Row1[1], Dashes);
+        PrintEvenRow(GlobalDigits[0].Row2, Dashes);
+        PrintOddRow(GlobalDigits[0].Row3[0], GlobalDigits[0].Row3[1], Dashes);
+        PrintEvenRow(GlobalDigits[0].Row4, Dashes);
     }
 }
