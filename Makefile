@@ -1,5 +1,5 @@
 # NOTE(brendan): set P using "export P=program_name" from shell
-P=lcd_display
+P=lcd_display/lcd_display
 
 OBJECTS=
 # STD_FLAGS=gnu11
