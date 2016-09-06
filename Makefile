@@ -1,9 +1,9 @@
 # NOTE(brendan): set P using "export P=program_name" from shell
-P=lcd_display/lcd_display
+P=graphical_editor/graphical_editor
 
 OBJECTS=
 # STD_FLAGS=gnu11
-STD_FLAGS=c11
+STD_FLAGS=c90
 MORE_FLAGS=#-DSHA1TEST
 CRYPTO_IMPL=crypto-grabbag/Implementations
 SLRE=slre

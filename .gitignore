@@ -11,3 +11,6 @@
 !lcd_display/
 !lcd_display/*.c
 !lcd_display/lcd_display_*
+!graphical_editor/
+!graphical_editor/*.c
+!graphical_editor/graphical_editor_*
