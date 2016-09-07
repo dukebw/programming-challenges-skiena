@@ -14,10 +14,15 @@
 
 struct canvas {
 	char pixels[MAX_COL_ROW*MAX_COL_ROW];
-	int32_t cols;
-	int32_t rows;
+	uint32_t cols;
+	uint32_t rows;
 };
 
+static inline void
+clear_canvas(struct canvas *canvas_in)
+{
+	memset(canvas_in->pixels, WHITE, canvas_in->cols*canvas_in->rows);
+}
 
 static int32_t
 create_mxn_image(struct canvas *canvas_in)
@@ -30,9 +35,30 @@ create_mxn_image(struct canvas *canvas_in)
 	if ((EOF == status) || (MAX_COL_ROW < m) || (MAX_COL_ROW < n))
 		return EDITOR_ERROR;
 
-	memset(canvas_in->pixels, WHITE, m*n);
 	canvas_in->cols = m;
 	canvas_in->rows = n;
+	clear_canvas(canvas_in);
+
+	return EDITOR_SUCCESS;
+}
+
+static int32_t
+colour_pixel(struct canvas *canvas_in)
+{
+	int32_t status;
+	uint32_t x;
+	uint32_t y;
+	char colour;
+
+	status = scanf("%u %u %c\n", &x, &y, &colour);
+	if ((EOF == status) ||
+	    (canvas_in->cols < x) ||
+	    (canvas_in->rows < y) ||
+	    ('A' > colour) ||
+	    ('Z' < colour))
+		return EDITOR_ERROR;
+
+	canvas_in->pixels[x + y*canvas_in->cols] = colour;
 
 	return EDITOR_SUCCESS;
 }
@@ -58,8 +84,9 @@ create_mxn_image(struct canvas *canvas_in)
  *                      the upper-let and (X2,Y2) is the lower right corner.
  *
  *    F X Y C         - Fill the region R with the colour C, where R is defined
- *                      as follows. Pixel (X,Y) belongs to R. Any other pixel that is the same
- *                      colour as pixel (X,Y) and shares a common side with any pixel in R also
+ *                      as follows. Pixel (X,Y) belongs to R. Any other pixel
+ *                      that is the same colour as pixel (X,Y) and shares a
+ *                      common side with any pixel in R also
  *                      belongs to this region.
  *
  *    S Name          - Write the file name in MSDOS 8.3 format followed by the
@@ -67,10 +94,12 @@ create_mxn_image(struct canvas *canvas_in)
  *
  *    X               - Terminate the session.
  *
- * Any command defined by a character other than I, C, L, V, H, K, F, S, or X is skipped.
+ * Any command defined by a character other than I, C, L, V, H, K, F, S, or X is
+ * skipped.
  *
  * Pixel co-ordinates are represented by two integers: a column number between
- * 1..M and a row number between 1..N, where 1 <= M,N <= 250. The origin sits in the upper-left corner.
+ * 1..M and a row number between 1..N, where 1 <= M,N <= 250. The origin sits in
+ * the upper-left corner.
  *
  * Colours are specified by capital letters.
  */
@@ -80,14 +109,18 @@ int main(void)
 	char command;
 	struct canvas user_canvas;
 
+	memset(&user_canvas, 0, sizeof(user_canvas));
+
 	while (EOF != (command = getchar())) {
 		switch (command) {
 		case 'I':
 			status = create_mxn_image(&user_canvas);
 			break;
 		case 'C':
+			clear_canvas(&user_canvas);
 			break;
 		case 'L':
+			status = colour_pixel(&user_canvas);
 			break;
 		case 'V':
 			break;
