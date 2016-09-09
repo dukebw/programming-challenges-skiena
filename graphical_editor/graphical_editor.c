@@ -5,23 +5,27 @@
 #include <assert.h>
 #include <stdbool.h>
 #include <string.h>
+#include <ctype.h>
 
-#define MAX_COL_ROW 250
-#define WHITE 0
+#define MAX_COLS 250
+#define MAX_ROWS MAX_COLS
+#define WHITE '0'
+/* 8 bytes for name, followed by . and 3 bytes for extension */
+#define MSDOS_8_3_FILENAME_SIZE_BYTES (8 + 4)
 
 #define EDITOR_SUCCESS 0
 #define EDITOR_ERROR (-1)
 
 struct canvas {
-	char pixels[MAX_COL_ROW*MAX_COL_ROW];
+	char pixels[MAX_ROWS*MAX_COLS];
 	uint32_t cols;
 	uint32_t rows;
 };
 
-static inline void
+static __inline void
 clear_canvas(struct canvas *canvas_in)
 {
-	memset(canvas_in->pixels, WHITE, canvas_in->cols*canvas_in->rows);
+	memset(canvas_in->pixels, WHITE, canvas_in->rows*canvas_in->cols);
 }
 
 static int32_t
@@ -32,7 +36,7 @@ create_mxn_image(struct canvas *canvas_in)
 	uint32_t n;
 
 	status = scanf("%u %u\n", &m, &n);
-	if ((EOF == status) || (MAX_COL_ROW < m) || (MAX_COL_ROW < n))
+	if ((status == EOF) || (m > MAX_COLS) || (n > MAX_ROWS))
 		return EDITOR_ERROR;
 
 	canvas_in->cols = m;
@@ -51,14 +55,49 @@ colour_pixel(struct canvas *canvas_in)
 	char colour;
 
 	status = scanf("%u %u %c\n", &x, &y, &colour);
-	if ((EOF == status) ||
-	    (canvas_in->cols < x) ||
-	    (canvas_in->rows < y) ||
-	    ('A' > colour) ||
-	    ('Z' < colour))
+	if ((status == EOF) ||
+	    (x > canvas_in->cols) ||
+	    (y > canvas_in->rows) ||
+	    (colour < 'A') ||
+	    (colour > 'Z'))
 		return EDITOR_ERROR;
 
 	canvas_in->pixels[x + y*canvas_in->cols] = colour;
+
+	return EDITOR_SUCCESS;
+}
+
+static int32_t
+write_image(struct canvas *canvas_in)
+{
+	uint32_t row;
+	uint32_t col;
+	char filename[MSDOS_8_3_FILENAME_SIZE_BYTES];
+
+	/* TODO(brendan): proper MSDOS 8.3 formatting */
+	do
+	{
+		filename[0] = getchar();
+	} while (isspace(filename[0]));
+
+	if (fgets(filename + 1, sizeof(filename) - 1, stdin) == 0)
+		return EDITOR_ERROR;
+
+	printf("%s\n", filename);
+
+	/* TODO(brendan): debug extra blank line */
+	for (row = 0;
+	     row < canvas_in->rows;
+	     ++row) {
+		for (col = 0;
+		     col < canvas_in->cols;
+		     ++col) {
+			printf("%c",
+			       (canvas_in->pixels[col + row*canvas_in->cols]));
+		}
+
+		printf("\n");
+	}
 
 	return EDITOR_SUCCESS;
 }
@@ -111,7 +150,7 @@ int main(void)
 
 	memset(&user_canvas, 0, sizeof(user_canvas));
 
-	while (EOF != (command = getchar())) {
+	while (EOF != scanf("%c", &command)) {
 		switch (command) {
 		case 'I':
 			status = create_mxn_image(&user_canvas);
@@ -131,6 +170,7 @@ int main(void)
 		case 'F':
 			break;
 		case 'S':
+			status = write_image(&user_canvas);
 			break;
 		case 'X':
 			break;
