@@ -22,6 +22,35 @@ struct canvas {
 	uint32_t rows;
 };
 
+static __inline bool
+is_colour_valid(char colour)
+{
+	    return (colour >= 'A') && (colour <= 'Z');
+}
+
+static __inline bool
+is_coord_valid(uint32_t coord, uint32_t max)
+{
+	return (coord >= 1) && (coord <= max);
+}
+
+static void
+swap(uint32_t *a, uint32_t *b)
+{
+	uint32_t temp = *a;
+	*a = *b;
+	*b = temp;
+}
+
+static __inline void
+set_pixel_colour(struct canvas *canvas_in,
+		 uint32_t col,
+		 uint32_t row,
+		 char colour)
+{
+	canvas_in->pixels[(col - 1) + (row - 1)*canvas_in->cols] = colour;
+}
+
 static __inline void
 clear_canvas(struct canvas *canvas_in)
 {
@@ -36,7 +65,9 @@ create_mxn_image(struct canvas *canvas_in)
 	uint32_t n;
 
 	status = scanf("%u %u\n", &m, &n);
-	if ((status == EOF) || (m > MAX_COLS) || (n > MAX_ROWS))
+	if ((status == EOF) ||
+	    !is_coord_valid(m, MAX_COLS) ||
+	    !is_coord_valid(n, MAX_ROWS))
 		return EDITOR_ERROR;
 
 	canvas_in->cols = m;
@@ -56,13 +87,43 @@ colour_pixel(struct canvas *canvas_in)
 
 	status = scanf("%u %u %c\n", &x, &y, &colour);
 	if ((status == EOF) ||
-	    (x > canvas_in->cols) ||
-	    (y > canvas_in->rows) ||
-	    (colour < 'A') ||
-	    (colour > 'Z'))
+	    !is_coord_valid(x, canvas_in->cols) ||
+	    !is_coord_valid(y, canvas_in->rows) ||
+	    !is_colour_valid(colour))
 		return EDITOR_ERROR;
 
-	canvas_in->pixels[x + y*canvas_in->cols] = colour;
+	set_pixel_colour(canvas_in, x, y, colour);
+
+	return EDITOR_SUCCESS;
+}
+
+static int32_t
+draw_vertical_segment(struct canvas *canvas_in)
+{
+	int32_t status;
+	uint32_t x;
+	uint32_t y1;
+	uint32_t y2;
+	uint32_t row;
+	char colour;
+
+	status = scanf("%u %u %u %c\n", &x, &y1, &y2, &colour);
+	if ((status == EOF) ||
+	    !is_coord_valid(x, canvas_in->cols) ||
+	    !is_coord_valid(y1, canvas_in->rows) ||
+	    !is_coord_valid(y2, canvas_in->rows) ||
+	    !is_colour_valid(colour))
+		return EDITOR_ERROR;
+
+	if (y1 > y2) {
+		swap(&y1, &y2);
+	}
+
+	for (row = y1;
+	     row <= y2;
+	     ++row) {
+		set_pixel_colour(canvas_in, x, row, colour);
+	}
 
 	return EDITOR_SUCCESS;
 }
@@ -74,7 +135,6 @@ write_image(struct canvas *canvas_in)
 	uint32_t col;
 	char filename[MSDOS_8_3_FILENAME_SIZE_BYTES];
 
-	/* TODO(brendan): proper MSDOS 8.3 formatting */
 	do
 	{
 		filename[0] = getchar();
@@ -83,9 +143,8 @@ write_image(struct canvas *canvas_in)
 	if (fgets(filename + 1, sizeof(filename) - 1, stdin) == 0)
 		return EDITOR_ERROR;
 
-	printf("%s\n", filename);
+	printf("%s", filename);
 
-	/* TODO(brendan): debug extra blank line */
 	for (row = 0;
 	     row < canvas_in->rows;
 	     ++row) {
@@ -162,6 +221,7 @@ int main(void)
 			status = colour_pixel(&user_canvas);
 			break;
 		case 'V':
+			status = draw_vertical_segment(&user_canvas);
 			break;
 		case 'H':
 			break;
