@@ -42,6 +42,9 @@ swap(uint32_t *a, uint32_t *b)
 	*b = temp;
 }
 
+/*
+ * Take col/row values in [1..N].
+ */
 static __inline void
 set_pixel_colour(struct canvas *canvas_in,
 		 uint32_t col,
@@ -49,6 +52,12 @@ set_pixel_colour(struct canvas *canvas_in,
 		 char colour)
 {
 	canvas_in->pixels[(col - 1) + (row - 1)*canvas_in->cols] = colour;
+}
+
+static __inline char
+get_pixel_colour(struct canvas *canvas_in, uint32_t col, uint32_t row)
+{
+	return canvas_in->pixels[(col - 1) + (row - 1)*canvas_in->cols];
 }
 
 static __inline void
@@ -129,6 +138,37 @@ draw_vertical_segment(struct canvas *canvas_in)
 }
 
 static int32_t
+draw_horizontal_segment(struct canvas *canvas_in)
+{
+	int32_t status;
+	uint32_t x1;
+	uint32_t x2;
+	uint32_t y;
+	uint32_t col;
+	char colour;
+
+	status = scanf("%u %u %u %c\n", &x1, &x2, &y, &colour);
+	if ((status == EOF) ||
+	    !is_coord_valid(x1, canvas_in->cols) ||
+	    !is_coord_valid(x2, canvas_in->cols) ||
+	    !is_coord_valid(y, canvas_in->rows) ||
+	    !is_colour_valid(colour))
+		return EDITOR_ERROR;
+
+	if (x1 > x2) {
+		swap(&x1, &x2);
+	}
+
+	for (col = x1;
+	     col <= x2;
+	     ++col) {
+		set_pixel_colour(canvas_in, col, y, colour);
+	}
+
+	return EDITOR_SUCCESS;
+}
+
+static int32_t
 write_image(struct canvas *canvas_in)
 {
 	uint32_t row;
@@ -145,14 +185,13 @@ write_image(struct canvas *canvas_in)
 
 	printf("%s", filename);
 
-	for (row = 0;
-	     row < canvas_in->rows;
+	for (row = 1;
+	     row <= canvas_in->rows;
 	     ++row) {
-		for (col = 0;
-		     col < canvas_in->cols;
+		for (col = 1;
+		     col <= canvas_in->cols;
 		     ++col) {
-			printf("%c",
-			       (canvas_in->pixels[col + row*canvas_in->cols]));
+			printf("%c", get_pixel_colour(canvas_in, col, row));
 		}
 
 		printf("\n");
@@ -224,6 +263,7 @@ int main(void)
 			status = draw_vertical_segment(&user_canvas);
 			break;
 		case 'H':
+			status = draw_horizontal_segment(&user_canvas);
 			break;
 		case 'K':
 			break;
