@@ -34,6 +34,12 @@ is_coord_valid(uint32_t coord, uint32_t max)
 	return (coord >= 1) && (coord <= max);
 }
 
+static __inline bool
+is_coord_pair_valid(uint32_t coord1, uint32_t coord2, uint32_t max)
+{
+	return is_coord_valid(coord1, max) && is_coord_valid(coord2, max);
+}
+
 static void
 swap(uint32_t *a, uint32_t *b)
 {
@@ -58,6 +64,22 @@ static __inline char
 get_pixel_colour(struct canvas *canvas_in, uint32_t col, uint32_t row)
 {
 	return canvas_in->pixels[(col - 1) + (row - 1)*canvas_in->cols];
+}
+
+static void
+set_row_pixel_colour(struct canvas *canvas_in,
+		     uint32_t row,
+		     uint32_t x1,
+		     uint32_t x2,
+		     char colour)
+{
+	uint32_t col;
+
+	for (col = x1;
+	     col <= x2;
+	     ++col) {
+		set_pixel_colour(canvas_in, col, row, colour);
+	}
 }
 
 static __inline void
@@ -119,8 +141,7 @@ draw_vertical_segment(struct canvas *canvas_in)
 	status = scanf("%u %u %u %c\n", &x, &y1, &y2, &colour);
 	if ((status == EOF) ||
 	    !is_coord_valid(x, canvas_in->cols) ||
-	    !is_coord_valid(y1, canvas_in->rows) ||
-	    !is_coord_valid(y2, canvas_in->rows) ||
+	    !is_coord_pair_valid(y1, y2, canvas_in->rows) ||
 	    !is_colour_valid(colour))
 		return EDITOR_ERROR;
 
@@ -144,13 +165,11 @@ draw_horizontal_segment(struct canvas *canvas_in)
 	uint32_t x1;
 	uint32_t x2;
 	uint32_t y;
-	uint32_t col;
 	char colour;
 
 	status = scanf("%u %u %u %c\n", &x1, &x2, &y, &colour);
 	if ((status == EOF) ||
-	    !is_coord_valid(x1, canvas_in->cols) ||
-	    !is_coord_valid(x2, canvas_in->cols) ||
+	    !is_coord_pair_valid(x1, x2, canvas_in->cols) ||
 	    !is_coord_valid(y, canvas_in->rows) ||
 	    !is_colour_valid(colour))
 		return EDITOR_ERROR;
@@ -159,11 +178,58 @@ draw_horizontal_segment(struct canvas *canvas_in)
 		swap(&x1, &x2);
 	}
 
-	for (col = x1;
-	     col <= x2;
-	     ++col) {
-		set_pixel_colour(canvas_in, col, y, colour);
+	set_row_pixel_colour(canvas_in, y, x1, x2, colour);
+
+	return EDITOR_SUCCESS;
+}
+
+static int32_t
+draw_filled_rectangle(struct canvas *canvas_in)
+{
+	int32_t status;
+	uint32_t x1;
+	uint32_t x2;
+	uint32_t y1;
+	uint32_t y2;
+	uint32_t row;
+	char colour;
+
+	status = scanf("%u %u %u %u %c\n", &x1, &x2, &y1, &y2, &colour);
+	if ((status == EOF) ||
+	    !is_coord_pair_valid(x1, x2, canvas_in->cols) ||
+	    !is_coord_pair_valid(y1, y2, canvas_in->rows) ||
+	    !is_colour_valid(colour) ||
+	    (x2 < x1) ||
+	    (y2 < y1))
+		return EDITOR_ERROR;
+
+	for (row = y1;
+	     row <= y2;
+	     ++row) {
+		set_row_pixel_colour(canvas_in, row, x1, x2, colour);
 	}
+
+	return EDITOR_SUCCESS;
+}
+
+static int32_t
+fill_in_region_r(struct canvas *canvas_in)
+{
+	int32_t status;
+	uint32_t x;
+	uint32_t y;
+	char colour;
+
+	status = scanf("%u %u %c\n", &x, &y, &colour);
+	if ((status == EOF) ||
+	    !is_coord_valid(x, canvas_in->cols) ||
+	    !is_coord_valid(y, canvas_in->rows) ||
+	    !is_colour_valid(colour))
+		return EDITOR_ERROR;
+
+	/* TODO(brendan): any pixel that shares a common side with a pixel in R
+	 * is also in R */
+	set_pixel_colour(canvas_in, x, y, colour);
 
 	return EDITOR_SUCCESS;
 }
@@ -218,7 +284,7 @@ write_image(struct canvas *canvas_in)
  *                      between the columns X1 and X2 inclusive.
  *
  *    K X1 Y1 X2 Y2 C - Draw a filled rectangle of colour C, where (X1,Y1) is
- *                      the upper-let and (X2,Y2) is the lower right corner.
+ *                      the upper-left and (X2,Y2) is the lower right corner.
  *
  *    F X Y C         - Fill the region R with the colour C, where R is defined
  *                      as follows. Pixel (X,Y) belongs to R. Any other pixel
@@ -266,14 +332,16 @@ int main(void)
 			status = draw_horizontal_segment(&user_canvas);
 			break;
 		case 'K':
+			status = draw_filled_rectangle(&user_canvas);
 			break;
 		case 'F':
+			status = fill_in_region_r(&user_canvas);
 			break;
 		case 'S':
 			status = write_image(&user_canvas);
 			break;
 		case 'X':
-			break;
+			goto success_exit;
 		default:
 			break;
 		}
@@ -282,5 +350,6 @@ int main(void)
 			return status;
 	}
 
+success_exit:
 	return EDITOR_SUCCESS;
 }
