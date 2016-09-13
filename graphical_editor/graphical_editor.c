@@ -16,8 +16,13 @@
 #define EDITOR_SUCCESS 0
 #define EDITOR_ERROR (-1)
 
+struct pixel {
+	char colour;
+	bool marked;
+};
+
 struct canvas {
-	char pixels[MAX_ROWS*MAX_COLS];
+	struct pixel pixels[MAX_ROWS*MAX_COLS];
 	uint32_t cols;
 	uint32_t rows;
 };
@@ -48,6 +53,12 @@ swap(uint32_t *a, uint32_t *b)
 	*b = temp;
 }
 
+static __inline uint32_t
+get_pixel_index(struct canvas *canvas_in, uint32_t col, uint32_t row)
+{
+	return (col - 1) + (row - 1)*canvas_in->cols;
+}
+
 /*
  * Take col/row values in [1..N].
  */
@@ -57,13 +68,17 @@ set_pixel_colour(struct canvas *canvas_in,
 		 uint32_t row,
 		 char colour)
 {
-	canvas_in->pixels[(col - 1) + (row - 1)*canvas_in->cols] = colour;
+	uint32_t pixel_index = get_pixel_index(canvas_in, col, row);
+
+	canvas_in->pixels[pixel_index].colour = colour;
 }
 
 static __inline char
 get_pixel_colour(struct canvas *canvas_in, uint32_t col, uint32_t row)
 {
-	return canvas_in->pixels[(col - 1) + (row - 1)*canvas_in->cols];
+	uint32_t pixel_index = get_pixel_index(canvas_in, col, row);
+
+	return canvas_in->pixels[pixel_index].colour;
 }
 
 static void
@@ -85,7 +100,13 @@ set_row_pixel_colour(struct canvas *canvas_in,
 static __inline void
 clear_canvas(struct canvas *canvas_in)
 {
-	memset(canvas_in->pixels, WHITE, canvas_in->rows*canvas_in->cols);
+	uint32_t pixeL_index;
+
+	for (pixeL_index = 0;
+	     pixeL_index < (canvas_in->rows*canvas_in->cols);
+	     ++pixeL_index) {
+		canvas_in->pixels[pixeL_index].colour = WHITE;
+	}
 }
 
 static int32_t
@@ -212,12 +233,54 @@ draw_filled_rectangle(struct canvas *canvas_in)
 	return EDITOR_SUCCESS;
 }
 
+static void
+expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour);
+
+static void
+x_maybe_expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour)
+{
+	uint32_t pixel_index = get_pixel_index(canvas_in, x, y);
+
+	if (is_coord_valid(x, canvas_in->cols) &&
+	    !canvas_in->pixels[pixel_index].marked) {
+		expand_region_r(canvas_in, x, y, colour);
+	}
+}
+
+static void
+y_maybe_expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour)
+{
+	uint32_t pixel_index = get_pixel_index(canvas_in, x, y);
+
+	if (is_coord_valid(y, canvas_in->cols) &&
+	    !canvas_in->pixels[pixel_index].marked) {
+		expand_region_r(canvas_in, x, y, colour);
+	}
+}
+
+static void
+expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour)
+{
+	uint32_t pixel_index = get_pixel_index(canvas_in, x, y);
+
+	canvas_in->pixels[pixel_index].marked = true;
+
+	x_maybe_expand_region_r(canvas_in, x + 1, y, colour);
+	y_maybe_expand_region_r(canvas_in, x, y + 1, colour);
+	x_maybe_expand_region_r(canvas_in, x - 1, y, colour);
+	y_maybe_expand_region_r(canvas_in, x, y - 1, colour);
+
+	set_pixel_colour(canvas_in, x, y, colour);
+}
+
+/* TODO(brendan): debug example; last row 0s instead of Js */
 static int32_t
 fill_in_region_r(struct canvas *canvas_in)
 {
 	int32_t status;
 	uint32_t x;
 	uint32_t y;
+	uint32_t pixel_index;
 	char colour;
 
 	status = scanf("%u %u %c\n", &x, &y, &colour);
@@ -227,9 +290,13 @@ fill_in_region_r(struct canvas *canvas_in)
 	    !is_colour_valid(colour))
 		return EDITOR_ERROR;
 
-	/* TODO(brendan): any pixel that shares a common side with a pixel in R
-	 * is also in R */
-	set_pixel_colour(canvas_in, x, y, colour);
+	for (pixel_index = 0;
+	     pixel_index < (canvas_in->rows*canvas_in->cols);
+	     ++pixel_index) {
+		canvas_in->pixels[pixel_index].marked = false;
+	}
+
+	expand_region_r(canvas_in, x, y, colour);
 
 	return EDITOR_SUCCESS;
 }
