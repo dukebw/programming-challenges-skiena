@@ -9,9 +9,14 @@
 
 #define MAX_COLS 250
 #define MAX_ROWS MAX_COLS
-#define WHITE '0'
-/* 8 bytes for name, followed by . and 3 bytes for extension */
-#define MSDOS_8_3_FILENAME_SIZE_BYTES (8 + 4)
+#define WHITE 'O'
+/* 8 bytes for name, followed by . and 3 bytes for extension
+ * (one byte for null) */
+#define MSDOS_8_3_FILENAME_SIZE_BYTES 8
+/* #define MSDOS_8_3_EXTENSION_SIZE_BYTES 3 */
+#define MSDOS_8_3_EXTENSION_SIZE_BYTES 5
+#define MSDOS_8_3_TOTAL_SIZE_BYTES \
+	(MSDOS_8_3_FILENAME_SIZE_BYTES + 1 + MSDOS_8_3_EXTENSION_SIZE_BYTES + 1)
 
 #define EDITOR_SUCCESS 0
 #define EDITOR_ERROR (-1)
@@ -27,19 +32,19 @@ struct canvas {
 	uint32_t rows;
 };
 
-static __inline bool
+static bool
 is_colour_valid(char colour)
 {
-	    return (colour >= 'A') && (colour <= 'Z');
+	return (colour >= 'A') && (colour <= 'Z');
 }
 
-static __inline bool
+static bool
 is_coord_valid(uint32_t coord, uint32_t max)
 {
 	return (coord >= 1) && (coord <= max);
 }
 
-static __inline bool
+static bool
 is_coord_pair_valid(uint32_t coord1, uint32_t coord2, uint32_t max)
 {
 	return is_coord_valid(coord1, max) && is_coord_valid(coord2, max);
@@ -53,7 +58,7 @@ swap(uint32_t *a, uint32_t *b)
 	*b = temp;
 }
 
-static __inline uint32_t
+static uint32_t
 get_pixel_index(struct canvas *canvas_in, uint32_t col, uint32_t row)
 {
 	return (col - 1) + (row - 1)*canvas_in->cols;
@@ -62,7 +67,7 @@ get_pixel_index(struct canvas *canvas_in, uint32_t col, uint32_t row)
 /*
  * Take col/row values in [1..N].
  */
-static __inline void
+static void
 set_pixel_colour(struct canvas *canvas_in,
 		 uint32_t col,
 		 uint32_t row,
@@ -73,7 +78,7 @@ set_pixel_colour(struct canvas *canvas_in,
 	canvas_in->pixels[pixel_index].colour = colour;
 }
 
-static __inline char
+static char
 get_pixel_colour(struct canvas *canvas_in, uint32_t col, uint32_t row)
 {
 	uint32_t pixel_index = get_pixel_index(canvas_in, col, row);
@@ -97,7 +102,7 @@ set_row_pixel_colour(struct canvas *canvas_in,
 	}
 }
 
-static __inline void
+static void
 clear_canvas(struct canvas *canvas_in)
 {
 	uint32_t pixeL_index;
@@ -166,9 +171,8 @@ draw_vertical_segment(struct canvas *canvas_in)
 	    !is_colour_valid(colour))
 		return EDITOR_ERROR;
 
-	if (y1 > y2) {
+	if (y1 > y2)
 		swap(&y1, &y2);
-	}
 
 	for (row = y1;
 	     row <= y2;
@@ -195,9 +199,8 @@ draw_horizontal_segment(struct canvas *canvas_in)
 	    !is_colour_valid(colour))
 		return EDITOR_ERROR;
 
-	if (x1 > x2) {
+	if (x1 > x2)
 		swap(&x1, &x2);
-	}
 
 	set_row_pixel_colour(canvas_in, y, x1, x2, colour);
 
@@ -237,7 +240,10 @@ static void
 expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour);
 
 static void
-x_maybe_expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour)
+x_maybe_expand_region_r(struct canvas *canvas_in,
+			uint32_t x,
+			uint32_t y,
+			char colour)
 {
 	uint32_t pixel_index = get_pixel_index(canvas_in, x, y);
 
@@ -248,11 +254,14 @@ x_maybe_expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char c
 }
 
 static void
-y_maybe_expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour)
+y_maybe_expand_region_r(struct canvas *canvas_in,
+			uint32_t x,
+			uint32_t y,
+			char colour)
 {
 	uint32_t pixel_index = get_pixel_index(canvas_in, x, y);
 
-	if (is_coord_valid(y, canvas_in->cols) &&
+	if (is_coord_valid(y, canvas_in->rows) &&
 	    !canvas_in->pixels[pixel_index].marked) {
 		expand_region_r(canvas_in, x, y, colour);
 	}
@@ -273,7 +282,6 @@ expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour)
 	set_pixel_colour(canvas_in, x, y, colour);
 }
 
-/* TODO(brendan): debug example; last row 0s instead of Js */
 static int32_t
 fill_in_region_r(struct canvas *canvas_in)
 {
@@ -302,21 +310,50 @@ fill_in_region_r(struct canvas *canvas_in)
 }
 
 static int32_t
-write_image(struct canvas *canvas_in)
+read_msdos_8_3_filename_and_print(void)
 {
-	uint32_t row;
-	uint32_t col;
-	char filename[MSDOS_8_3_FILENAME_SIZE_BYTES];
+	uint32_t name_index;
+	char filename[MSDOS_8_3_TOTAL_SIZE_BYTES];
 
-	do
-	{
+	do {
 		filename[0] = getchar();
 	} while (isspace(filename[0]));
 
-	if (fgets(filename + 1, sizeof(filename) - 1, stdin) == 0)
+	for (name_index = 1;
+	     (name_index < MSDOS_8_3_FILENAME_SIZE_BYTES);
+	     ++name_index) {
+		filename[name_index] = getchar();
+
+		if (filename[name_index] == '.')
+			break;
+	}
+
+	if (filename[name_index] != '.')
+		return EDITOR_ERROR;
+
+	++name_index;
+
+	/* TODO(brendan): print newline properly if extension is too long */
+	if (fgets(filename + name_index,
+		  MSDOS_8_3_EXTENSION_SIZE_BYTES + 1,
+		  stdin) == 0)
 		return EDITOR_ERROR;
 
 	printf("%s", filename);
+
+	return EDITOR_SUCCESS;
+}
+
+static int32_t
+write_image(struct canvas *canvas_in)
+{
+	int32_t status;
+	uint32_t row;
+	uint32_t col;
+
+	status = read_msdos_8_3_filename_and_print();
+	if (status != EDITOR_SUCCESS)
+		return status;
 
 	for (row = 1;
 	     row <= canvas_in->rows;
@@ -336,16 +373,16 @@ write_image(struct canvas *canvas_in)
 /*
  * Graphical editor accepting commands:
  *
- *    I M N           - Create a new MxN image with all pixels initially coloured
- *                      white (0).
+ *    I M N           - Create a new MxN image with all pixels initially
+ *                      coloured white (0).
  *
- *    C               - Clear the table by setting all pixels white (0). The size
- *                      remains unchanged.
+ *    C               - Clear the table by setting all pixels white (0). The
+ *                      size remains unchanged.
  *
  *    L X Y C         - Colours the pixel (X,Y) in colour (C).
  *
- *    V X Y1 Y2 C     - Draw a vertical segment of colour (C) in column X, between
- *                      the rows Y1 and Y2 inclusive.
+ *    V X Y1 Y2 C     - Draw a vertical segment of colour (C) in column X,
+ *                      between the rows Y1 and Y2 inclusive.
  *
  *    H X1 Y2 Y C     - Draw a horizontal segment of colour (C) in the row Y,
  *                      between the columns X1 and X2 inclusive.
@@ -381,7 +418,7 @@ int main(void)
 
 	memset(&user_canvas, 0, sizeof(user_canvas));
 
-	while (EOF != scanf("%c", &command)) {
+	while (scanf("%c", &command) != EOF) {
 		switch (command) {
 		case 'I':
 			status = create_mxn_image(&user_canvas);
@@ -413,8 +450,8 @@ int main(void)
 			break;
 		}
 
-		if (EDITOR_SUCCESS != status)
-			return status;
+		if (status != EDITOR_SUCCESS)
+			(void)status; /* return status; */
 	}
 
 success_exit:
