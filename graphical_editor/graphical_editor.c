@@ -218,7 +218,7 @@ draw_filled_rectangle(struct canvas *canvas_in)
 	uint32_t row;
 	char colour;
 
-	status = scanf("%u %u %u %u %c\n", &x1, &x2, &y1, &y2, &colour);
+	status = scanf("%u %u %u %u %c\n", &x1, &y1, &x2, &y2, &colour);
 	if ((status == EOF) ||
 	    !is_coord_pair_valid(x1, x2, canvas_in->cols) ||
 	    !is_coord_pair_valid(y1, y2, canvas_in->rows) ||
@@ -237,19 +237,43 @@ draw_filled_rectangle(struct canvas *canvas_in)
 }
 
 static void
-expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour);
+expand_region_r(struct canvas *canvas_in,
+		uint32_t x,
+		uint32_t y,
+		char r_colour,
+		char colour_to_fill);
+
+static void
+mark_and_maybe_expand_region_r(struct canvas *canvas_in,
+			       uint32_t x,
+			       uint32_t y,
+			       char r_colour,
+			       char colour_to_fill,
+			       uint32_t pixel_index)
+{
+	canvas_in->pixels[pixel_index].marked = true;
+
+	if (canvas_in->pixels[pixel_index].colour == r_colour)
+		expand_region_r(canvas_in, x, y, r_colour, colour_to_fill);
+}
 
 static void
 x_maybe_expand_region_r(struct canvas *canvas_in,
 			uint32_t x,
 			uint32_t y,
-			char colour)
+			char r_colour,
+			char colour_to_fill)
 {
 	uint32_t pixel_index = get_pixel_index(canvas_in, x, y);
 
 	if (is_coord_valid(x, canvas_in->cols) &&
 	    !canvas_in->pixels[pixel_index].marked) {
-		expand_region_r(canvas_in, x, y, colour);
+		mark_and_maybe_expand_region_r(canvas_in,
+					       x,
+					       y,
+					       r_colour,
+					       colour_to_fill,
+					       pixel_index);
 	}
 }
 
@@ -257,29 +281,35 @@ static void
 y_maybe_expand_region_r(struct canvas *canvas_in,
 			uint32_t x,
 			uint32_t y,
-			char colour)
+			char r_colour,
+			char colour_to_fill)
 {
 	uint32_t pixel_index = get_pixel_index(canvas_in, x, y);
 
 	if (is_coord_valid(y, canvas_in->rows) &&
 	    !canvas_in->pixels[pixel_index].marked) {
-		expand_region_r(canvas_in, x, y, colour);
+		mark_and_maybe_expand_region_r(canvas_in,
+					       x,
+					       y,
+					       r_colour,
+					       colour_to_fill,
+					       pixel_index);
 	}
 }
 
 static void
-expand_region_r(struct canvas *canvas_in, uint32_t x, uint32_t y, char colour)
+expand_region_r(struct canvas *canvas_in,
+		uint32_t x,
+		uint32_t y,
+		char r_colour,
+		char colour_to_fill)
 {
-	uint32_t pixel_index = get_pixel_index(canvas_in, x, y);
+	x_maybe_expand_region_r(canvas_in, x + 1, y, r_colour, colour_to_fill);
+	y_maybe_expand_region_r(canvas_in, x, y + 1, r_colour, colour_to_fill);
+	x_maybe_expand_region_r(canvas_in, x - 1, y, r_colour, colour_to_fill);
+	y_maybe_expand_region_r(canvas_in, x, y - 1, r_colour, colour_to_fill);
 
-	canvas_in->pixels[pixel_index].marked = true;
-
-	x_maybe_expand_region_r(canvas_in, x + 1, y, colour);
-	y_maybe_expand_region_r(canvas_in, x, y + 1, colour);
-	x_maybe_expand_region_r(canvas_in, x - 1, y, colour);
-	y_maybe_expand_region_r(canvas_in, x, y - 1, colour);
-
-	set_pixel_colour(canvas_in, x, y, colour);
+	set_pixel_colour(canvas_in, x, y, colour_to_fill);
 }
 
 static int32_t
@@ -289,13 +319,13 @@ fill_in_region_r(struct canvas *canvas_in)
 	uint32_t x;
 	uint32_t y;
 	uint32_t pixel_index;
-	char colour;
+	char colour_to_fill;
 
-	status = scanf("%u %u %c\n", &x, &y, &colour);
+	status = scanf("%u %u %c\n", &x, &y, &colour_to_fill);
 	if ((status == EOF) ||
 	    !is_coord_valid(x, canvas_in->cols) ||
 	    !is_coord_valid(y, canvas_in->rows) ||
-	    !is_colour_valid(colour))
+	    !is_colour_valid(colour_to_fill))
 		return EDITOR_ERROR;
 
 	for (pixel_index = 0;
@@ -304,7 +334,13 @@ fill_in_region_r(struct canvas *canvas_in)
 		canvas_in->pixels[pixel_index].marked = false;
 	}
 
-	expand_region_r(canvas_in, x, y, colour);
+	pixel_index = get_pixel_index(canvas_in, x, y);
+
+	expand_region_r(canvas_in,
+			x,
+			y,
+			canvas_in->pixels[pixel_index].colour,
+			colour_to_fill);
 
 	return EDITOR_SUCCESS;
 }
