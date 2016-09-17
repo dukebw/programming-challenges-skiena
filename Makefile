@@ -1,5 +1,5 @@
 # NOTE(brendan): set P using "export P=program_name" from shell
-P=graphical_editor/graphical_editor
+P=interpreter/interpreter
 
 OBJECTS=
 # STD_FLAGS=gnu11

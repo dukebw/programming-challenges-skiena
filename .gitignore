@@ -14,3 +14,6 @@
 !graphical_editor/
 !graphical_editor/*.c
 !graphical_editor/graphical_editor_*
+!interpreter/
+!interpreter/*.c
+!interpreter/interpreter_*

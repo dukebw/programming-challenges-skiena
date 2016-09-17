@@ -10,8 +10,10 @@
 #define MAX_COLS 250
 #define MAX_ROWS MAX_COLS
 #define WHITE 'O'
-/* 8 bytes for name, followed by . and 3 bytes for extension
- * (one byte for null) */
+/*
+ * 8 bytes for name, followed by . and 3 bytes for extension
+ * (one byte for null)
+ */
 #define MSDOS_8_3_FILENAME_SIZE_BYTES 8
 /* #define MSDOS_8_3_EXTENSION_SIZE_BYTES 3 */
 #define MSDOS_8_3_EXTENSION_SIZE_BYTES 5
