@@ -13,6 +13,19 @@
 #define NUM_REGISTERS 10
 #define RAM_MAX_VALUE 999
 
+enum {
+	HALT = 1,
+	MOV_I = 2,
+	ADD_I = 3,
+	MUL_I = 4,
+	MOV = 5,
+	ADD = 6,
+	MUL = 7,
+	LDR = 8,
+	STR = 9,
+	BNE = 0,
+};
+
 static int32_t
 read_ram(uint32_t *ram)
 {
@@ -29,8 +42,7 @@ read_ram(uint32_t *ram)
 		if (input_line[0] == '\n')
 			break;
 
-		if ((sscanf(input_line, "%u\n", &ram_value) == EOF) ||
-		    (ram_value > RAM_MAX_VALUE))
+		if (sscanf(input_line, "%u\n", &ram_value) == EOF)
 			return INTERPRETER_ERROR;
 
 		ram[ram_index] = ram_value;
@@ -43,6 +55,54 @@ read_ram(uint32_t *ram)
 	return INTERPRETER_SUCCESS;
 }
 
+static uint32_t
+get_opcode(uint32_t mem_word)
+{
+	return ((mem_word/100) % 10);
+}
+
+static int32_t
+execute_program(uint32_t *ram, uint32_t *registers)
+{
+	uint32_t program_counter = 0;
+	uint32_t left_operand;
+	uint32_t right_operand;
+	uint32_t opcode;
+
+	for (opcode = get_opcode(ram[program_counter]);
+	     opcode != HALT;
+	     opcode = get_opcode(ram[program_counter])) {
+		left_operand = (ram[program_counter]/10) % 10;
+		right_operand = ram[program_counter] % 10;
+
+		switch (opcode) {
+		case MOV_I:
+			registers[left_operand] = right_operand % 10;
+			break;
+		/* TODO(brendan): add other opcodes */
+		default:
+			return INTERPRETER_ERROR;
+		}
+	}
+
+	return INTERPRETER_SUCCESS;
+}
+
+/*
+ * 100 means halt
+ * 2dn means set register d to n (between 0 and 9)
+ * 3dn means add n to register d
+ * 4dn means multiply register d by n
+ * 5ds means set register d to the value of register s
+ * 6ds means add the value of register s to the value of register d
+ * 7ds means multiply register d by the value of register s
+ * 8da means set register d to the value in RAM whose address is in register a
+ * 9sa means set the value in RAM whose address is in register a to that of
+ *     register s
+ * 0ds means goto the location in register d unless register s contains 0
+ *
+ * All results are reduced modulo 1000
+ */
 int main(void)
 {
 	int32_t status;
@@ -57,6 +117,10 @@ int main(void)
 			memset(registers, 0, sizeof(registers));
 
 			status = read_ram(ram);
+			if (status != INTERPRETER_SUCCESS)
+				return status;
+
+			status = execute_program(ram, registers);
 			if (status != INTERPRETER_SUCCESS)
 				return status;
 		}
