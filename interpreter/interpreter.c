@@ -11,7 +11,7 @@
 #define INTERPRETER_ERROR (-1)
 #define RAM_SIZE_WORDS 1000
 #define NUM_REGISTERS 10
-#define RAM_MAX_VALUE 999
+#define RAM_UPPER_BOUND 1000
 
 enum {
 	HALT = 1,
@@ -62,7 +62,9 @@ get_opcode(uint32_t mem_word)
 }
 
 static int32_t
-execute_program(uint32_t *ram, uint32_t *registers)
+execute_program(uint32_t *instructions_executed,
+		uint32_t *ram,
+		uint32_t *registers)
 {
 	uint32_t program_counter = 0;
 	uint32_t left_operand;
@@ -71,18 +73,49 @@ execute_program(uint32_t *ram, uint32_t *registers)
 
 	for (opcode = get_opcode(ram[program_counter]);
 	     opcode != HALT;
-	     opcode = get_opcode(ram[program_counter])) {
+	     opcode = get_opcode(ram[program_counter]),
+	     ++(*instructions_executed)) {
 		left_operand = (ram[program_counter]/10) % 10;
 		right_operand = ram[program_counter] % 10;
 
 		switch (opcode) {
 		case MOV_I:
-			registers[left_operand] = right_operand % 10;
+			registers[left_operand] = right_operand;
 			break;
-		/* TODO(brendan): add other opcodes */
+		case ADD_I:
+			registers[left_operand] += right_operand;
+			registers[left_operand] %= RAM_UPPER_BOUND;
+			break;
+		case MUL_I:
+			registers[left_operand] *= right_operand;
+			registers[left_operand] %= RAM_UPPER_BOUND;
+			break;
+		case MOV:
+			registers[left_operand] = registers[right_operand];
+			break;
+		case ADD:
+			registers[left_operand] += registers[right_operand];
+			registers[left_operand] %= RAM_UPPER_BOUND;
+			break;
+		case MUL:
+			registers[left_operand] *= registers[right_operand];
+			registers[left_operand] %= RAM_UPPER_BOUND;
+			break;
+		case LDR:
+			registers[left_operand] = ram[right_operand];
+			break;
+		case STR:
+			ram[right_operand] = registers[left_operand];
+			break;
+		case BNE:
+			if (registers[right_operand] != 0)
+				program_counter = registers[left_operand] - 1;
+			break;
 		default:
 			return INTERPRETER_ERROR;
 		}
+
+		program_counter = (program_counter + 1) % RAM_SIZE_WORDS;
 	}
 
 	return INTERPRETER_SUCCESS;
@@ -109,6 +142,7 @@ int main(void)
 	int32_t num_test_cases;
 	uint32_t ram[RAM_SIZE_WORDS];
 	uint32_t registers[NUM_REGISTERS];
+	uint32_t instructions_executed;
 
 	while (scanf("%d\n\n", &num_test_cases) != EOF) {
 		for (;
@@ -120,9 +154,12 @@ int main(void)
 			if (status != INTERPRETER_SUCCESS)
 				return status;
 
-			status = execute_program(ram, registers);
+			instructions_executed = 0;
+			status = execute_program(&instructions_executed, ram, registers);
 			if (status != INTERPRETER_SUCCESS)
 				return status;
+
+			printf("%u\n\n", instructions_executed);
 		}
 	}
 
