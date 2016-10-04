@@ -62,23 +62,18 @@ get_opcode(uint32_t mem_word)
 }
 
 static int32_t
-execute_program(uint32_t *instructions_executed,
-		uint32_t *ram,
-		uint32_t *registers)
+execute_instruction(uint32_t *program_counter,
+		    uint32_t *ram,
+		    uint32_t *registers,
+		    int32_t opcode)
 {
-	uint32_t program_counter = 0;
 	uint32_t left_operand;
 	uint32_t right_operand;
-	uint32_t opcode;
 
-	for (opcode = get_opcode(ram[program_counter]);
-	     opcode != HALT;
-	     opcode = get_opcode(ram[program_counter]),
-	     ++(*instructions_executed)) {
-		left_operand = (ram[program_counter]/10) % 10;
-		right_operand = ram[program_counter] % 10;
+	left_operand = (ram[*program_counter]/10) % 10;
+	right_operand = ram[*program_counter] % 10;
 
-		switch (opcode) {
+	switch (opcode) {
 		case MOV_I:
 			registers[left_operand] = right_operand;
 			break;
@@ -109,13 +104,37 @@ execute_program(uint32_t *instructions_executed,
 			break;
 		case BNE:
 			if (registers[right_operand] != 0)
-				program_counter = registers[left_operand] - 1;
+				*program_counter = registers[left_operand] - 1;
 			break;
 		default:
 			return INTERPRETER_ERROR;
-		}
+	}
 
-		program_counter = (program_counter + 1) % RAM_SIZE_WORDS;
+	*program_counter = (*program_counter + 1) % RAM_SIZE_WORDS;
+
+	return INTERPRETER_SUCCESS;
+}
+
+static int32_t
+execute_program(uint32_t *instructions_executed,
+		uint32_t *ram,
+		uint32_t *registers)
+{
+	int32_t status;
+	uint32_t program_counter = 0;
+	uint32_t opcode;
+
+	for (opcode = get_opcode(ram[program_counter]);
+	     opcode != HALT;
+	     opcode = get_opcode(ram[program_counter])) {
+		status = execute_instruction(&program_counter,
+					     ram,
+					     registers,
+					     opcode);
+		if (status != INTERPRETER_SUCCESS)
+			return status;
+
+		++(*instructions_executed);
 	}
 
 	return INTERPRETER_SUCCESS;
@@ -144,7 +163,7 @@ int main(void)
 	uint32_t registers[NUM_REGISTERS];
 	uint32_t instructions_executed;
 
-	while (scanf("%d\n\n", &num_test_cases) != EOF) {
+	while (scanf("%d\n", &num_test_cases) != EOF) {
 		for (;
 		     num_test_cases > 0;
 		     --num_test_cases) {
@@ -154,7 +173,7 @@ int main(void)
 			if (status != INTERPRETER_SUCCESS)
 				return status;
 
-			instructions_executed = 0;
+			instructions_executed = 1;
 			status = execute_program(&instructions_executed, ram, registers);
 			if (status != INTERPRETER_SUCCESS)
 				return status;
