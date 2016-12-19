@@ -36,8 +36,12 @@ read_ram(uint32_t *ram)
 	for (ram_index = 0;
 	     ram_index < RAM_SIZE_WORDS;
 	     ++ram_index) {
-		if (fgets(input_line, sizeof(input_line), stdin) == 0)
+		if (fgets(input_line, sizeof(input_line), stdin) == NULL) {
+			if (feof(stdin))
+				break;
+
 			return INTERPRETER_ERROR;
+		}
 
 		if (input_line[0] == '\n')
 			break;
@@ -74,40 +78,42 @@ execute_instruction(uint32_t *program_counter,
 	right_operand = ram[*program_counter] % 10;
 
 	switch (opcode) {
-		case MOV_I:
-			registers[left_operand] = right_operand;
-			break;
-		case ADD_I:
-			registers[left_operand] += right_operand;
-			registers[left_operand] %= RAM_UPPER_BOUND;
-			break;
-		case MUL_I:
-			registers[left_operand] *= right_operand;
-			registers[left_operand] %= RAM_UPPER_BOUND;
-			break;
-		case MOV:
-			registers[left_operand] = registers[right_operand];
-			break;
-		case ADD:
-			registers[left_operand] += registers[right_operand];
-			registers[left_operand] %= RAM_UPPER_BOUND;
-			break;
-		case MUL:
-			registers[left_operand] *= registers[right_operand];
-			registers[left_operand] %= RAM_UPPER_BOUND;
-			break;
-		case LDR:
-			registers[left_operand] = ram[right_operand];
-			break;
-		case STR:
-			ram[right_operand] = registers[left_operand];
-			break;
-		case BNE:
-			if (registers[right_operand] != 0)
-				*program_counter = registers[left_operand] - 1;
-			break;
-		default:
-			return INTERPRETER_ERROR;
+	case MOV_I:
+		registers[left_operand] = right_operand;
+		break;
+	case ADD_I:
+		registers[left_operand] += right_operand;
+		registers[left_operand] %= RAM_UPPER_BOUND;
+		break;
+	case MUL_I:
+		registers[left_operand] *= right_operand;
+		registers[left_operand] %= RAM_UPPER_BOUND;
+		break;
+	case MOV:
+		registers[left_operand] = registers[right_operand];
+		break;
+	case ADD:
+		registers[left_operand] += registers[right_operand];
+		registers[left_operand] %= RAM_UPPER_BOUND;
+		break;
+	case MUL:
+		registers[left_operand] *= registers[right_operand];
+		registers[left_operand] %= RAM_UPPER_BOUND;
+		break;
+	case LDR:
+		registers[left_operand] = ram[registers[right_operand]];
+		break;
+	case STR:
+		ram[registers[right_operand]] = registers[left_operand];
+		break;
+	case BNE:
+		if (registers[right_operand] != 0) {
+			*program_counter = registers[left_operand];
+			return INTERPRETER_SUCCESS;
+		}
+		break;
+	default:
+		return INTERPRETER_ERROR;
 	}
 
 	*program_counter = (*program_counter + 1) % RAM_SIZE_WORDS;
@@ -178,7 +184,9 @@ int main(void)
 			if (status != INTERPRETER_SUCCESS)
 				return status;
 
-			printf("%u\n\n", instructions_executed);
+			printf("%u\n", instructions_executed);
+			if (num_test_cases > 1)
+				printf("\n");
 		}
 	}
 
