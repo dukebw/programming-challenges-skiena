@@ -17,3 +17,6 @@
 !interpreter/
 !interpreter/*.c
 !interpreter/interpreter_*
+!check_the_check/
+!check_the_check/*.c
+!check_the_check/check_the_check_*

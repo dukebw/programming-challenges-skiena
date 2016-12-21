@@ -1,5 +1,5 @@
 # NOTE(brendan): set P using "export P=program_name" from shell
-P=interpreter/interpreter
+P=check_the_check/check_the_check
 
 OBJECTS=
 # STD_FLAGS=gnu11
