@@ -14,6 +14,8 @@
 #define WHITE_KING 'K'
 #define BLACK_KING 'k'
 
+#define ARRAY_LENGTH(array) (sizeof(array)/sizeof((array)[0]))
+
 enum {
 	EMPTY = '.',
 	PAWN = 'p',
@@ -27,16 +29,34 @@ enum {
 const char BLACK_KING_LABEL[] = "black";
 const char WHITE_KING_LABEL[] = "white";
 
-static uint32_t
-get_location(uint32_t row, uint32_t column)
+static char
+get_piece(const char *chessboard, uint32_t row, uint32_t column)
 {
-	return row*CHESSBOARD_DIM + column;
+	return chessboard[row*CHESSBOARD_DIM + column];
 }
 
 static bool
 is_valid_board_dimension(int32_t dimension)
 {
 	return (dimension >= 0) && (dimension < CHESSBOARD_DIM);
+}
+
+static bool
+are_valid_board_dimensions(uint32_t row, uint32_t column)
+{
+	return (is_valid_board_dimension(row) &&
+		is_valid_board_dimension(column));
+}
+
+static const char *
+get_king_label(char piece)
+{
+	if (piece == BLACK_KING)
+		return BLACK_KING_LABEL;
+	else if (piece == WHITE_KING)
+		return WHITE_KING_LABEL;
+
+	return NULL;
 }
 
 static const char *
@@ -46,20 +66,14 @@ check_for_king(const char *chessboard,
 	       char king_to_attack)
 {
 	char piece;
-	uint32_t location;
 
-	if (!is_valid_board_dimension(row_index) ||
-	    !is_valid_board_dimension(column_index))
+	if (!are_valid_board_dimensions(row_index, column_index))
 		return NULL;
 
-	location = get_location(row_index, column_index);
-	piece = chessboard[location];
+	piece = get_piece(chessboard, row_index, column_index);
 
 	if (piece == king_to_attack) {
-		if (piece == BLACK_KING)
-			return BLACK_KING_LABEL;
-		else if (piece == WHITE_KING)
-			return WHITE_KING_LABEL;
+		return get_king_label(piece);
 	}
 
 	return NULL;
@@ -110,35 +124,71 @@ const char *
 check_attacks_for_square(const char *chessboard, uint32_t row_index, uint32_t column_index)
 {
 	const char *king_in_check = NULL;
-	uint32_t location = get_location(row_index, column_index);
-	char piece = chessboard[location];
+	char piece = get_piece(chessboard, row_index, column_index);
 	bool is_piece_black = islower(piece);
+	char king_to_attack = is_piece_black ? WHITE_KING : BLACK_KING;
 
 	switch (tolower(piece)) {
 	case KING:
 	case EMPTY:
 		break;
 	case PAWN:
+	{
+		int32_t row_to_attack;
 		if (is_piece_black) {
-			king_in_check = check_for_pawn_attack(chessboard,
-							      row_index + 1,
-							      column_index,
-							      WHITE_KING);
-			if (king_in_check)
-				return king_in_check;
+			row_to_attack = row_index + 1;
 		} else {
-			king_in_check = check_for_pawn_attack(chessboard,
-							      row_index - 1,
-							      column_index,
-							      BLACK_KING);
+			row_to_attack = row_index - 1;
+		}
+		king_in_check = check_for_pawn_attack(chessboard,
+						      row_to_attack,
+						      column_index,
+						      king_to_attack);
+		if (king_in_check)
+			return king_in_check;
+		break;
+	}
+	case KNIGHT:
+	{
+		int32_t attack_locations[][2] = {{1, 2}, {-1, 2}, {1, -2}, {-1, -2},
+						 {2, 1}, {2, -1}, {-2, 1}, {-2, -1}};
+
+		for (uint32_t attack_index = 0;
+		     attack_index < ARRAY_LENGTH(attack_locations);
+		     ++attack_index) {
+			king_in_check = check_for_king(chessboard,
+						       attack_locations[attack_index][0],
+						       attack_locations[attack_index][1],
+						       king_to_attack);
 			if (king_in_check)
 				return king_in_check;
 		}
 		break;
-	case KNIGHT:
-		break;
+	}
 	case BISHOP:
+	{
+		int32_t directions[][2] = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+
+		for (uint32_t direction_index = 0;
+		     direction_index < ARRAY_LENGTH(directions);
+		     ++direction_index) {
+			for (uint32_t step_index = 1;
+			     ;
+			     ++step_index) {
+				uint32_t attack_row = row_index + directions[direction_index][0]*step_index;
+				uint32_t attack_column = row_index + directions[direction_index][1]*step_index;
+				if (!are_valid_board_dimensions(attack_row, attack_column))
+					break;
+
+				char piece_to_attack = get_piece(chessboard, attack_row, attack_column);
+				if (piece_to_attack == king_to_attack)
+					return get_king_label(piece_to_attack);
+				else if (piece_to_attack != EMPTY)
+					break;
+			}
+		}
 		break;
+	}
 	case ROOK:
 		break;
 	case QUEEN:
