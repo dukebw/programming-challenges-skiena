@@ -121,12 +121,45 @@ read_chessboard(char *chessboard, uint32_t chessboard_size_bytes)
 }
 
 const char *
+check_linear_directions_for_king(const char *chessboard,
+				 const int32_t directions[][2],
+				 char king_to_attack,
+				 uint32_t row_index,
+				 uint32_t column_index)
+{
+	const NUM_DIRECTIONS = 4;
+
+	for (uint32_t direction_index = 0;
+	     direction_index < NUM_DIRECTIONS;
+	     ++direction_index) {
+		for (uint32_t step_index = 1;
+		     ;
+		     ++step_index) {
+			uint32_t attack_row = row_index + directions[direction_index][0]*step_index;
+			uint32_t attack_column = column_index + directions[direction_index][1]*step_index;
+			if (!are_valid_board_dimensions(attack_row, attack_column))
+				break;
+
+			char piece_to_attack = get_piece(chessboard, attack_row, attack_column);
+			if (piece_to_attack == king_to_attack)
+				return get_king_label(piece_to_attack);
+			else if (piece_to_attack != EMPTY)
+				break;
+		}
+	}
+
+	return NULL;
+}
+
+const char *
 check_attacks_for_square(const char *chessboard, uint32_t row_index, uint32_t column_index)
 {
 	const char *king_in_check = NULL;
 	char piece = get_piece(chessboard, row_index, column_index);
 	bool is_piece_black = islower(piece);
 	char king_to_attack = is_piece_black ? WHITE_KING : BLACK_KING;
+	const int32_t BISHOP_DIR[][2] = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
+	const int32_t ROOK_DIR[][2] = {{0, 1}, {0, -1}, {1, 0}, {-1, 0}};
 
 	switch (tolower(piece)) {
 	case KING:
@@ -167,31 +200,34 @@ check_attacks_for_square(const char *chessboard, uint32_t row_index, uint32_t co
 	}
 	case BISHOP:
 	{
-		int32_t directions[][2] = {{-1, -1}, {-1, 1}, {1, -1}, {1, 1}};
-
-		for (uint32_t direction_index = 0;
-		     direction_index < ARRAY_LENGTH(directions);
-		     ++direction_index) {
-			for (uint32_t step_index = 1;
-			     ;
-			     ++step_index) {
-				uint32_t attack_row = row_index + directions[direction_index][0]*step_index;
-				uint32_t attack_column = row_index + directions[direction_index][1]*step_index;
-				if (!are_valid_board_dimensions(attack_row, attack_column))
-					break;
-
-				char piece_to_attack = get_piece(chessboard, attack_row, attack_column);
-				if (piece_to_attack == king_to_attack)
-					return get_king_label(piece_to_attack);
-				else if (piece_to_attack != EMPTY)
-					break;
-			}
-		}
+		king_in_check = check_linear_directions_for_king(chessboard,
+								 BISHOP_DIR,
+								 king_to_attack,
+								 row_index,
+								 column_index);
 		break;
 	}
 	case ROOK:
+		king_in_check = check_linear_directions_for_king(chessboard,
+								 ROOK_DIR,
+								 king_to_attack,
+								 row_index,
+								 column_index);
 		break;
 	case QUEEN:
+		king_in_check = check_linear_directions_for_king(chessboard,
+								 BISHOP_DIR,
+								 king_to_attack,
+								 row_index,
+								 column_index);
+		if (king_in_check)
+			return king_in_check;
+
+		king_in_check = check_linear_directions_for_king(chessboard,
+								 ROOK_DIR,
+								 king_to_attack,
+								 row_index,
+								 column_index);
 		break;
 	default:
 		return NULL;
