@@ -1,66 +1,17 @@
 /* Balanced parentheses checker. */
+#ifdef HOMEGROWN
+#include "homegrown_stack.hpp"
+#else
+#include "std_stack.hpp"
+#endif /* HOMEGROWN */
+
+#include <stack>
+
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-/**
- * struct memory - Buffer for allocating arbitrary structs.
- * @data: The flat data buffer.
- * @used: Bytes used.
- */
-struct memory {
-        uint8_t data[1024];
-        uint32_t used;
-};
-
-static struct memory MEMORY;
-
-struct list {
-        char value;
-        struct list *next;
-};
-
-struct stack {
-        struct list *top;
-};
-
-/**
- * push() - Push a value onto a stack.
- * @stk: Stack to push onto.
- * @val: Value to push.
- */
-static void
-push(struct stack *stk, char val)
-{
-        struct list *open_bracket = (struct list *)(MEMORY.data + MEMORY.used);
-        open_bracket->next = stk->top;
-        open_bracket->value = val;
-        stk->top = open_bracket;
-
-        MEMORY.used += sizeof(struct list);
-        assert(MEMORY.used <= sizeof(MEMORY.data));
-}
-
-/**
- * pop() - Pop a value from a stack.
- * @stk: Stack to pop from.
- *
- * Returns true if pop of an empty stack was attempted, false otherwise.
- */
-static bool
-pop(struct stack *stk)
-{
-        if (stk->top == NULL)
-                return true;
-
-        stk->top = stk->top->next;
-
-        MEMORY.used -= sizeof(struct list);
-
-        return false;
-}
 
 int main(void)
 {
@@ -82,7 +33,7 @@ int main(void)
                 uint32_t num_brackets = strlen(read_buf) - 1;
 
                 struct stack bracket_stack;
-                bracket_stack.top = NULL;
+                init_stack(&bracket_stack);
 
                 /**
                  * Parse list, pushing for open and popping for close brackets.
@@ -104,7 +55,7 @@ int main(void)
                         }
                 }
 
-                if (!popped_empty && (bracket_stack.top == NULL))
+                if (!popped_empty && is_empty(&bracket_stack))
                         printf("y\n");
                 else
                         printf("n\n");
